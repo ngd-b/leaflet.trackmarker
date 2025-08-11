@@ -1,0 +1,69 @@
+{
+  "name": "leaflet.trackmarker",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "A Leaflet plugin for animated moving markers along a path with rotation support.",
+  "main": "dist/index.umd.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.umd.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "scripts": {
+    "build": "tsc && rollup -c rollup.config.js",
+    "release": "bumpp",
+    "publish:npm": "tsx scripts/publish.ts"
+  },
+  "keywords": [
+    "leaflet",
+    "plugin",
+    "marker",
+    "animation",
+    "track",
+    "path",
+    "moving",
+    "route"
+  ],
+  "author": {
+    "name": "hboot",
+    "email": "bobolity@163.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": " https://github.com/ngd-b/leaflet.trackmarker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ngd-b/leaflet.trackmarker/issues"
+  },
+  "homepage": "https://github.com/ngd-b/leaflet.trackmarker#readme",
+  "packageManager": "pnpm@10.4.1",
+  "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.1.4",
+    "@types/geojson": "^7946.0.16",
+    "@types/leaflet": "^1.9.20",
+    "@types/node": "^24.2.1",
+    "bumpp": "^10.2.2",
+    "leaflet": "^1.9.4",
+    "rollup": "^4.46.2",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.2"
+  },
+  "peerDependencies": {
+    "leaflet": "^1.9.0"
+  },
+  "dependencies": {
+    "@turf/turf": "^7.0.0"
+  }
+}
