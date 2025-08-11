@@ -60,8 +60,14 @@ const route = [
   [116.7, 39.98]
 ];
 
+let line = L.polyline(route, {
+  color: "red",
+  weight: 5,
+  opacity: 0.5,
+});
+line.addTo(map);
 // 创建可移动的 Marker
-const marker = trackMarker(route, {
+const marker = trackMarker(line, {
   speed: 0.005,           // 速度：5 米/秒
   rotation: true,         // 启用自动旋转
   autoPlay: true,         // 自动开始
@@ -88,8 +94,13 @@ marker.reset();    // 重置到起点
     [116.5, 39.95],
     [116.6, 39.92]
   ];
-
-  const marker = L.trackMarker(route, {
+  let line = L.polyline(route, {
+    color: "red",
+    weight: 5,
+    opacity: 0.5,
+  });
+  line.addTo(map);
+  const marker = L.trackMarker(line, {
     speed: 0.005,
     rotation: true
   }).addTo(map);
@@ -102,7 +113,7 @@ marker.reset();    // 重置到起点
 
 ## 🛠️ API
 
-### `trackMarker(line: Line | Array<[number, number]>, options?: TrackMarkerOptions)`
+### `trackMarker(line: L.Polyline, options?: TrackMarkerOptions)`
 
 创建一个可移动的 TrackMarker。
 
@@ -110,7 +121,7 @@ marker.reset();    // 重置到起点
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
-| `line` | `LineString` \| `Feature<LineString>` \| `Array<[number, number]>` | 路径数据，支持 GeoJSON 或坐标数组 |
+| `line` |  `L.Polyline` | 路径图层 |
 | `options` | `TrackMarkerOptions` | 配置选项（见下表） |
 
 ---
@@ -119,11 +130,9 @@ marker.reset();    // 重置到起点
 
 | 选项 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `speed` | `number` | `0.01` | 移动速度（km/s） |
+| `speed` | `number` | `0.1` | 移动速度（km/s） |
 | `autoPlay` | `boolean` | `true` | 是否自动开始播放 |
 | `rotation` | `boolean` | `true` | 是否启用自动旋转 |
-| `pathStyle` | `L.PolylineOptions` | `undefined` | 路径样式（设为 `false` 可隐藏路径） |
-| `icon` | `L.Icon` | `L.Icon.Default` | 自定义图标（如小车图标） |
 
 ---
 
@@ -154,21 +163,6 @@ marker.on('progress', (e) => {
   console.log(`已移动 ${e.percent * 100}%`);
 });
 ```
-
----
-
-## 💡 样式提示（旋转支持）
-
-确保你的图标支持旋转，推荐在 CSS 中添加：
-
-```css
-.leaflet-marker-icon {
-  transition: transform 0.1s linear;
-  transform-origin: center center;
-}
-```
-
-如果你使用自定义图标（如小车），插件会通过 CSS 变量 `--marker-rotate` 控制方向。
 
 ---
 
