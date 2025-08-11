@@ -1,80 +1,54 @@
 import * as L from "leaflet";
-import { lineString, along, bearing, length } from "@turf/turf";
-import type { Feature, FeatureCollection, LineString } from "geojson";
+import { along, bearing, length } from "@turf/turf";
+import type { Feature, LineString } from "geojson";
 
+// 插件实现
 export class TrackMarker extends L.Marker {
-  options: L.TrackMarkerOptions;
+  declare options: L.TrackMarkerOptions;
 
+  private _polyline: L.Polyline;
   private _line: Feature<LineString>;
   private _totalDistance: number;
   private _isPlaying: boolean = false;
   private _elapsedTime: number = 0;
   private _animationId: number | null = null;
 
-  constructor(line: L.TrackLine, options?: L.TrackMarkerOptions) {
-    super([0, 0], options);
-
+  constructor(line: L.Polyline, options?: L.TrackMarkerOptions) {
     // 默认选项
-    this.options = {
+    const defaultOptions: L.TrackMarkerOptions = {
       speed: 0.1,
       autoPlay: true,
       rotation: true,
-      ...options,
     };
-
-    // 归一化输入为 LineString Feature
-    if (Array.isArray(line)) {
-      this._line = lineString(line);
-    } else if (line.type === "Feature" && line.geometry.type === "LineString") {
-      this._line = line;
-    } else if (line.type === "LineString") {
-      this._line = lineString(line.coordinates);
-    } else if (line.type === "FeatureCollection") {
-      // 取第一条 LineString
-      const first = line.features.find(
-        (f: Feature) => f.geometry.type === "LineString"
-      );
-      if (!first) throw new Error("No LineString found in FeatureCollection");
-      this._line = first as Feature<LineString>;
-    } else {
-      throw new Error("【leaflet.trackmarker】Invalid line input");
+    const latlngs = line.getLatLngs() as L.LatLng[];
+    if (latlngs.length < 2) {
+      throw new Error("【leaflet.TrackMarker】Polyline has no points");
     }
+    super(latlngs[0]!, { ...defaultOptions, ...options });
 
-    if (this._line.geometry.coordinates.length < 2) {
-      throw new Error(
-        "【leaflet.trackmarker】Invalid line input, line must have at least two points"
-      );
-    }
-    // 计算总长度（km）
+    this._polyline = line;
+    this._line = this._polyline.toGeoJSON() as Feature<LineString>;
+
+    // 总距离（km）
     this._totalDistance = length(this._line, { units: "kilometers" });
-
-    // 初始化位置
-    const firstCoord = this._line.geometry.coordinates[0]!;
-    this.setLatLng(L.latLng(firstCoord[1]!, firstCoord[0]!));
   }
 
   onAdd(map: L.Map): this {
     super.onAdd(map);
 
-    if (this.options.autoPlay) {
-      this.play();
-    }
-
+    if (this.options.autoPlay) this.play();
     return this;
   }
 
   onRemove(map: L.Map): this {
+    debugger;
     this.pause();
     super.onRemove(map);
     return this;
   }
 
-  /**
-   * 开始或继续播放
-   */
   play(): this {
     if (this._isPlaying) return this;
-
     this._isPlaying = true;
     const startTime = performance.now() - this._elapsedTime * 1000;
 
@@ -101,9 +75,6 @@ export class TrackMarker extends L.Marker {
     return this;
   }
 
-  /**
-   * 暂停播放
-   */
   pause(): this {
     if (!this._isPlaying) return this;
     this._isPlaying = false;
@@ -115,9 +86,6 @@ export class TrackMarker extends L.Marker {
     return this;
   }
 
-  /**
-   * 重置到起点
-   */
   reset(): this {
     this.pause();
     this._elapsedTime = 0;
@@ -130,9 +98,6 @@ export class TrackMarker extends L.Marker {
     return this;
   }
 
-  /**
-   * 跳转到路径的百分比位置 (0-1)
-   */
   seek(percent: number): this {
     percent = Math.max(0, Math.min(1, percent));
     const distance = percent * this._totalDistance;
@@ -150,15 +115,11 @@ export class TrackMarker extends L.Marker {
     return this;
   }
 
-  /**
-   * 设置新速度
-   */
   setSpeed(speed: number): this {
     this.options.speed = speed;
     return this;
   }
 
-  // 内部方法：更新位置和旋转
   private _updatePositionAndRotation(): void {
     const traveled = this._elapsedTime * this.options.speed!;
     const pos = along(this._line, traveled, { units: "kilometers" }).geometry
@@ -171,42 +132,61 @@ export class TrackMarker extends L.Marker {
     }
   }
 
-  // 获取某段距离处的方向角
   private _getBearingAtDistance(distance: number): number {
     const slice = along(this._line, distance, { units: "kilometers" });
     const next = along(this._line, distance + 0.001, { units: "kilometers" });
     return bearing(slice, next);
   }
 
-  // 初始方向角（防止起点无法计算）
   private _estimateInitialBearing(): number {
     const len = this._line.geometry.coordinates.length;
     if (len < 2) return 0;
     const p1 = this._line.geometry.coordinates[0]!;
     const p2 = this._line.geometry.coordinates[1]!;
-    return bearing(p1, p2);
+    return bearing(
+      { type: "Point", coordinates: p1 },
+      { type: "Point", coordinates: p2 }
+    );
   }
 
-  // 设置旋转（通过 CSS 变量）
   private _setRotation(angle: number): void {
-    let icon = this.getElement();
-    if (icon) {
-      let transfrom = icon.style.transform;
+    const icon = this.getElement();
+    if (!icon) return;
 
-      const withoutRotate = transfrom.replace(/rotate\([^)]*\)/g, "").trim();
+    try {
+      let currentTransform =
+        window.getComputedStyle(icon).transform || icon.style.transform || "";
+
+      const withoutRotate = currentTransform
+        .replace(/rotate\([^)]*\)/g, "")
+        .trim();
+
       const newTransform = withoutRotate
         ? `${withoutRotate} rotate(${angle}deg)`
         : `rotate(${angle}deg)`;
-      icon.style.transform = newTransform;
+
+      if (newTransform !== icon.style.transform) {
+        icon.style.transform = newTransform;
+      }
+    } catch (error) {
+      console.warn("Failed to set rotation:", error);
     }
   }
+}
+
+// 工厂函数：小写，返回实例
+export function trackMarker(
+  line: L.Polyline,
+  options?: L.TrackMarkerOptions
+): L.TrackMarker {
+  return new L.TrackMarker(line, options);
 }
 
 // 使用 Leaflet 的插件机制
 L.Map.addInitHook(function (this: L.Map) {
   // @ts-ignore
   this.trackMarker = (
-    line: L.TrackLine,
+    line: L.Polyline,
     options?: L.TrackMarkerOptions
   ): L.TrackMarker => {
     return new TrackMarker(line, options);
