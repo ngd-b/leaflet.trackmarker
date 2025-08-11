@@ -72,34 +72,41 @@
 
       // 定义路径（北京一段路线）
       const route = [
-        [116.4, 39.9],
-        [116.42, 39.91],
-        [116.45, 39.92],
-        [116.47, 39.93],
-        [116.48, 39.94],
-        [116.5, 39.95],
+        [39.9, 116.4],
+        [39.91, 116.42],
+        [39.92, 116.45],
+        [39.93, 116.47],
+        [39.94, 116.48],
+        [39.95, 116.5],
       ];
 
       // 创建自定义图标（使用 DivIcon）
       const carIcon = L.divIcon({
-        html: '<img src="https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png" width="24" height="24" style="transform-origin: center center;">',
+        html: '<div><img src="https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png" width="24" height="24" style="transform-origin: center center;"></div>',
         className: "car-marker",
         iconSize: [24, 24],
-        iconAnchor: [12, 12],
+        iconAnchor: [10, 10],
       });
 
+      let line = L.polyline(route, {
+        color: "red",
+        weight: 5,
+        opacity: 0.5,
+      });
+      line.addTo(map);
       // 创建 TrackMarker
-      const marker = new L.TrackMarker(route, {
+      const marker = new L.TrackMarker(line, {
         icon: carIcon,
-        speed: 0.05, // 5 米/秒
+        speed: 1, // 5 米/秒
         rotation: true, // 启用旋转
-        autoPlay: false, // 手动控制
+        autoPlay: true, // 手动控制
         pathStyle: {
           color: "blue",
           weight: 4,
           opacity: 0.6,
         },
-      }).addTo(map);
+      });
+      marker.addTo(map);
 
       // 控制函数
       function play() {
@@ -115,13 +122,13 @@
       }
 
       // 可选：监听进度
-      marker.on("progress", (e) => {
-        console.log(`进度: ${(e.percent * 100).toFixed(1)}%`);
-      });
+      // marker.on("progress", (e) => {
+      //   console.log(`进度: ${(e.percent * 100).toFixed(1)}%`);
+      // });
 
-      marker.on("arrived", () => {
-        console.log("已到达终点！");
-      });
+      // marker.on("arrived", () => {
+      //   console.log("已到达终点！");
+      // });
     </script>
   </body>
 </html>

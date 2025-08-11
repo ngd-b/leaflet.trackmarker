@@ -7,9 +7,6 @@
 [![npm version](https://img.shields.io/npm/v/leaflet.trackmarker.svg)](https://www.npmjs.com/package/leaflet.trackmarker)
 [![License](https://img.shields.io/npm/l/leaflet.trackmarker.svg)](LICENSE)
 
-![Demo Concept](https://via.placeholder.com/800x400?text=Moving+Marker+Along+Path)  
-*(示意图：Marker 沿路线移动并自动转向)*
-
 ---
 
 ## ✨ 特性
