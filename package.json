@@ -3,14 +3,14 @@
   "version": "0.0.0",
   "type": "module",
   "description": "A Leaflet plugin for animated moving markers along a path with rotation support.",
-  "main": "dist/index.umd.js",
-  "module": "dist/index.esm.js",
-  "types": "dist/types/index.d.ts",
+  "main": "dist/leaflet.trackmarker.umd.js",
+  "module": "dist/leaflet.trackmarker.esm.js",
+  "types": "dist/leaflet.trackmarker.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.esm.js",
-      "require": "./dist/index.umd.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/leaflet.trackmarker.esm.js",
+      "require": "./dist/leaflet.trackmarker.umd.js",
+      "types": "./dist/leaflet.trackmarker.d.ts"
     }
   },
   "files": [
@@ -20,7 +20,7 @@
     "package.json"
   ],
   "scripts": {
-    "build": "tsc && rollup -c rollup.config.js",
+    "build": "rollup -c rollup.config.js",
     "release": "bumpp",
     "publish:npm": "tsx scripts/publish.ts"
   },
@@ -57,6 +57,7 @@
     "bumpp": "^10.2.2",
     "leaflet": "^1.9.4",
     "rollup": "^4.46.2",
+    "rollup-plugin-dts": "^6.2.1",
     "tsx": "^4.20.3",
     "typescript": "^5.9.2"
   },
