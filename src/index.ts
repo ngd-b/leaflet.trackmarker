@@ -1,4 +1,5 @@
 import * as L from "leaflet";
+import "./leaflet.trackmarker";
 import { along, bearing, length } from "@turf/turf";
 import type { Feature, LineString } from "geojson";
 
@@ -179,7 +180,7 @@ export function trackMarker(
   line: L.Polyline,
   options?: L.TrackMarkerOptions
 ): L.TrackMarker {
-  return new L.TrackMarker(line, options);
+  return new TrackMarker(line, options);
 }
 
 // 使用 Leaflet 的插件机制
@@ -192,3 +193,8 @@ L.Map.addInitHook(function (this: L.Map) {
     return new TrackMarker(line, options);
   };
 });
+
+if (typeof window !== "undefined" && window.L) {
+  window.L.trackMarker = trackMarker;
+  window.L.TrackMarker = TrackMarker;
+}
