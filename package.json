@@ -1,6 +1,6 @@
 {
   "name": "leaflet.trackmarker",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "A Leaflet plugin for animated moving markers along a path with rotation support.",
   "main": "dist/leaflet.trackmarker.umd.js",
