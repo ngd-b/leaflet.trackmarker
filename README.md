@@ -51,8 +51,9 @@ npm install leaflet.trackmarker @turf/turf
 ### 1. 模块化项目（ESM / TypeScript）
 
 ```ts
+import L from 'leaflet';  
 import 'leaflet/dist/leaflet.css';
-import { trackMarker } from 'leaflet.trackmarker';
+import 'leaflet.trackmarker';
 
 // 定义路径（经纬度数组）
 const route = [
@@ -69,15 +70,11 @@ let line = L.polyline(route, {
 });
 line.addTo(map);
 // 创建可移动的 Marker
-const marker = trackMarker(line, {
+const marker = L.trackMarker(line, {
   speed: 0.005,           // 速度：5 米/秒
   rotation: true,         // 启用自动旋转
   autoPlay: true,         // 自动开始
-  pathStyle: {            // 可选：显示路径
-    color: 'blue',
-    opacity: 0.5,
-    weight: 2
-  }
+  rotationOffset: -90,      // 图标方向修正（例如：图标默认朝右）
 }).addTo(map);
 
 // 控制播放
@@ -135,6 +132,13 @@ marker.reset();    // 重置到起点
 | `speed` | `number` | `0.1` | 移动速度（km/s） |
 | `autoPlay` | `boolean` | `true` | 是否自动开始播放 |
 | `rotation` | `boolean` | `true` | 是否启用自动旋转 |
+| `rotationOffset` | `number` | `0` | 旋转偏移角度 |
+| `onPause`| `() => void` | - |暂停时的回调 |
+| `onReset` | `() => void` | - |重置到起点时的回调 |
+| `onFinish` | `() => void`|  - |到达终点时的回调 |
+| `onProgress` |`() => void` | - |播放过程中持续触发的回调|
+| `onBeforePlay` |`() => void` | - |播放前触发的回调|
+| `onPlay` |`() => void` | - |播放时触发的回调|
 
 ---
 
@@ -147,24 +151,6 @@ marker.reset();    // 重置到起点
 | `.reset()` | 重置到路径起点 |
 | `.seek(percent)` | 跳转到路径的百分比位置（0-1） |
 | `.setSpeed(speed)` | 动态设置新速度 |
-| `.isPlaying()` | 返回是否正在播放（需自行扩展） |
-
----
-
-### 事件
-
-| 事件 | 说明 |
-|------|------|
-| `progress` | 播放中触发，携带 `{ percent }` |
-| `arrived` | 到达终点时触发 |
-| `pause` | 暂停时触发 |
-| `reset` | 重置时触发 |
-
-```ts
-marker.on('progress', (e) => {
-  console.log(`已移动 ${e.percent * 100}%`);
-});
-```
 
 ---
 
