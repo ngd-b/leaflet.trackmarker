@@ -87,11 +87,16 @@ export class TrackMarker extends L.Marker {
   play(): this {
     if (this._isPlaying) return this;
     this._isPlaying = true;
-    const startTime = performance.now() - this._elapsedTime * 1000;
 
-    const animate = () => {
-      const now = performance.now();
-      this._elapsedTime = (now - startTime) / 1000;
+    const startTime = performance.now() - this._elapsedTime * 1000;
+    // 记录上一帧的时间
+    let lastTime = performance.now();
+
+    const animate = (currentTime: number) => {
+      let deltaTime = (currentTime - lastTime) / 1000;
+      // 防止瞬移
+      const maxDeltaTime = 0.1; // 最大 100ms
+      this._elapsedTime += Math.min(deltaTime, maxDeltaTime);
 
       const traveled = this._elapsedTime * this.options.speed!;
       if (traveled >= this._totalDistance) {
@@ -105,11 +110,12 @@ export class TrackMarker extends L.Marker {
       this._updatePositionAndRotation();
       this.options.onProgress?.call(this);
 
+      lastTime = currentTime;
       this._animationId = requestAnimationFrame(animate);
     };
 
     this.options.onBeforePlay?.call(this);
-    animate();
+    this._animationId = requestAnimationFrame(animate);
     this.options.onPlay?.call(this);
     return this;
   }
