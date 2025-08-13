@@ -23,7 +23,7 @@ export class TrackMarker extends L.Marker {
     };
     const latlngs = line.getLatLngs() as L.LatLng[];
     if (latlngs.length < 2) {
-      throw new Error("【leaflet.TrackMarker】Polyline has no points");
+      throw new Error("【leaflet.TrackMarker】Polyline must have two points");
     }
     super(latlngs[0]!, { ...defaultOptions, ...options });
 
@@ -42,7 +42,6 @@ export class TrackMarker extends L.Marker {
   }
 
   onRemove(map: L.Map): this {
-    debugger;
     this.pause();
     super.onRemove(map);
     return this;
@@ -90,8 +89,8 @@ export class TrackMarker extends L.Marker {
   reset(): this {
     this.pause();
     this._elapsedTime = 0;
-    const first = this._line.geometry.coordinates[0]!;
-    this.setLatLng(L.latLng(first[1]!, first[0]!));
+    const point = this._line.geometry.coordinates[0]!;
+    this.setLatLng(L.latLng(point[1]!, point[0]!));
     if (this.options.rotation) {
       this._setRotation(this._estimateInitialBearing());
     }
@@ -140,8 +139,6 @@ export class TrackMarker extends L.Marker {
   }
 
   private _estimateInitialBearing(): number {
-    const len = this._line.geometry.coordinates.length;
-    if (len < 2) return 0;
     const p1 = this._line.geometry.coordinates[0]!;
     const p2 = this._line.geometry.coordinates[1]!;
     return bearing(
