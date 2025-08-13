@@ -72,20 +72,25 @@
 
       // 定义路径（北京一段路线）
       const route = [
-        [39.9, 116.4],
-        [39.91, 116.42],
-        [39.92, 116.45],
-        [39.93, 116.47],
-        [39.94, 116.48],
-        [39.95, 116.5],
+        [118.79065934, 32.03502262],
+        [118.78728476, 32.03590284],
+        [118.78732184, 32.03731745],
+        [118.78416976, 32.03807191],
+        [118.78408594, 32.04177462],
+        [118.79471194, 32.04103865],
+        [118.80455398, 32.04036108],
+        [118.8059906, 32.04614544],
+        [118.80829554, 32.05714885],
       ];
-
+      route.forEach((p) => {
+        [p[0], p[1]] = [p[1], p[0]];
+      });
       // 创建自定义图标（使用 DivIcon）
       const carIcon = L.divIcon({
         html: '<div><img src="https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png" width="24" height="24" style="transform-origin: center center;"></div>',
         className: "car-marker",
         iconSize: [24, 24],
-        iconAnchor: [10, 10],
+        // iconAnchor: [20, 20],
       });
 
       let line = L.polyline(route, {
@@ -94,16 +99,24 @@
         opacity: 0.5,
       });
       line.addTo(map);
+      map.fitBounds(line.getBounds());
       // 创建 TrackMarker
       const marker = new L.TrackMarker(line, {
         icon: carIcon,
-        speed: 1, // 5 米/秒
+        speed: 0.2, // 5 米/秒
         rotation: true, // 启用旋转
         autoPlay: true, // 手动控制
-        pathStyle: {
-          color: "blue",
-          weight: 4,
-          opacity: 0.6,
+        onPlay() {
+          console.log("开始移动");
+        },
+        onFinish() {
+          console.log("完成移动");
+        },
+        onPause() {
+          console.log("暂停移动");
+        },
+        onProgress: function () {
+          console.log("移动进度", this.getLatLng());
         },
       });
       marker.addTo(map);
