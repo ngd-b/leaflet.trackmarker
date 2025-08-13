@@ -13,6 +13,7 @@ export class TrackMarker extends L.Marker {
   private _isPlaying: boolean = false;
   private _elapsedTime: number = 0;
   private _animationId: number | null = null;
+  private _currentRotation: number = 0;
 
   constructor(line: L.Polyline, options?: L.TrackMarkerOptions) {
     // 默认选项
@@ -45,6 +46,39 @@ export class TrackMarker extends L.Marker {
     this.pause();
     super.onRemove(map);
     return this;
+  }
+  _setPos(pos: L.Point): void {
+    // @ts-ignore
+    super._setPos(pos);
+
+    const icon = this.getElement();
+    if (!icon) return;
+
+    icon.style.transformOrigin = "center center";
+    // 获取 Leaflet 设置的 transform（包含 translate）
+    const currentTransform =
+      icon.style.transform || window.getComputedStyle(icon).transform;
+
+    // 注入 rotate
+    const rotate = `rotate(${this._currentRotation}deg)`;
+    let newTransform = currentTransform;
+
+    if (currentTransform === "none") {
+      newTransform = rotate;
+    } else {
+      // 如果已有 transform（如 translate），我们追加 rotate
+      // 注意：顺序很重要，rotate 应该在最后
+      if (!currentTransform.includes("rotate")) {
+        newTransform = `${currentTransform} ${rotate}`;
+      } else {
+        // 替换已有的 rotate
+        newTransform = currentTransform.replace(/rotate\([^)]*\)/g, rotate);
+      }
+    }
+
+    if (newTransform !== icon.style.transform) {
+      icon.style.transform = newTransform;
+    }
   }
 
   play(): this {
@@ -92,10 +126,11 @@ export class TrackMarker extends L.Marker {
     this.pause();
     this._elapsedTime = 0;
     const point = this._line.geometry.coordinates[0]!;
-    this.setLatLng(L.latLng(point[1]!, point[0]!));
+
     if (this.options.rotation) {
-      this._setRotation(this._estimateInitialBearing());
+      this._currentRotation = this._estimateInitialBearing();
     }
+    this.setLatLng(L.latLng(point[1]!, point[0]!));
     this.options.onReset?.call(this);
     return this;
   }
@@ -108,8 +143,7 @@ export class TrackMarker extends L.Marker {
     this.setLatLng(L.latLng(pos[1]!, pos[0]!));
 
     if (this.options.rotation) {
-      const angle = this._getBearingAtDistance(distance);
-      this._setRotation(angle);
+      this._currentRotation = this._getBearingAtDistance(distance);
     }
 
     this._elapsedTime = distance / this.options.speed!;
@@ -130,8 +164,7 @@ export class TrackMarker extends L.Marker {
     this.setLatLng(latlng);
 
     if (this.options.rotation) {
-      const angle = this._getBearingAtDistance(traveled);
-      this._setRotation(angle);
+      this._currentRotation = this._getBearingAtDistance(traveled);
     }
     return latlng;
   }
@@ -149,30 +182,6 @@ export class TrackMarker extends L.Marker {
       { type: "Point", coordinates: p1 },
       { type: "Point", coordinates: p2 }
     );
-  }
-
-  private _setRotation(angle: number): void {
-    const icon = this.getElement();
-    if (!icon) return;
-
-    try {
-      let currentTransform =
-        window.getComputedStyle(icon).transform || icon.style.transform || "";
-
-      const withoutRotate = currentTransform
-        .replace(/rotate\([^)]*\)/g, "")
-        .trim();
-
-      const newTransform = withoutRotate
-        ? `${withoutRotate} rotate(${angle}deg)`
-        : `rotate(${angle}deg)`;
-
-      if (newTransform !== icon.style.transform) {
-        icon.style.transform = newTransform;
-      }
-    } catch (error) {
-      console.warn("Failed to set rotation:", error);
-    }
   }
 }
 
