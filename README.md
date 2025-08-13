@@ -1,11 +1,13 @@
 
 # 🛣️ Leaflet.TrackMarker
 
+[![npm version](https://img.shields.io/npm/v/leaflet.trackmarker.svg)](https://www.npmjs.com/package/leaflet.trackmarker)
+[![License](https://img.shields.io/npm/l/leaflet.trackmarker.svg)](LICENSE)
+
 > **A lightweight Leaflet plugin for animated markers that move along a path with automatic rotation.**  
 > 让你的 Marker 沿路线自动移动，并智能旋转方向！
 
-[![npm version](https://img.shields.io/npm/v/leaflet.trackmarker.svg)](https://www.npmjs.com/package/leaflet.trackmarker)
-[![License](https://img.shields.io/npm/l/leaflet.trackmarker.svg)](LICENSE)
+![dexample gif](./example/example.gif)
 
 ---
 
