@@ -60,18 +60,20 @@ export class TrackMarker extends L.Marker {
       if (traveled >= this._totalDistance) {
         this._isPlaying = false;
         this._elapsedTime = this._totalDistance / this.options.speed!;
-        this._updatePositionAndRotation();
-        this.fire("arrived");
+
+        this.options.onFinish?.call(this);
         return;
       }
 
       this._updatePositionAndRotation();
-      this.fire("progress", { percent: traveled / this._totalDistance });
+      this.options.onProgress?.call(this);
 
       this._animationId = requestAnimationFrame(animate);
     };
 
+    this.options.onBeforePlay?.call(this);
     animate();
+    this.options.onPlay?.call(this);
     return this;
   }
 
@@ -82,7 +84,7 @@ export class TrackMarker extends L.Marker {
       cancelAnimationFrame(this._animationId);
       this._animationId = null;
     }
-    this.fire("pause");
+    this.options.onPause?.call(this);
     return this;
   }
 
@@ -94,7 +96,7 @@ export class TrackMarker extends L.Marker {
     if (this.options.rotation) {
       this._setRotation(this._estimateInitialBearing());
     }
-    this.fire("reset");
+    this.options.onReset?.call(this);
     return this;
   }
 
@@ -111,7 +113,6 @@ export class TrackMarker extends L.Marker {
     }
 
     this._elapsedTime = distance / this.options.speed!;
-    this.fire("seek", { percent });
     return this;
   }
 
@@ -120,16 +121,19 @@ export class TrackMarker extends L.Marker {
     return this;
   }
 
-  private _updatePositionAndRotation(): void {
+  private _updatePositionAndRotation(): L.LatLng {
     const traveled = this._elapsedTime * this.options.speed!;
     const pos = along(this._line, traveled, { units: "kilometers" }).geometry
       .coordinates;
-    this.setLatLng(L.latLng(pos[1]!, pos[0]!));
+
+    let latlng = L.latLng(pos[1]!, pos[0]!);
+    this.setLatLng(latlng);
 
     if (this.options.rotation) {
       const angle = this._getBearingAtDistance(traveled);
       this._setRotation(angle);
     }
+    return latlng;
   }
 
   private _getBearingAtDistance(distance: number): number {

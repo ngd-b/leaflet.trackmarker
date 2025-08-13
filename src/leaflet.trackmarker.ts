@@ -9,6 +9,13 @@ declare global {
       speed?: number; // km/s
       autoPlay?: boolean;
       rotation?: boolean;
+
+      onFinish?: () => void;
+      onProgress?: () => void;
+      onPause?: () => void;
+      onBeforePlay?: () => void;
+      onPlay?: () => void;
+      onReset?: () => void;
     }
 
     class TrackMarker extends L.Marker {
