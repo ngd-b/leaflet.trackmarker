@@ -21,6 +21,7 @@ export class TrackMarker extends L.Marker {
       speed: 0.1,
       autoPlay: true,
       rotation: true,
+      rotationOffset: 0,
     };
     const latlngs = line.getLatLngs() as L.LatLng[];
     if (latlngs.length < 2) {
@@ -60,7 +61,9 @@ export class TrackMarker extends L.Marker {
       icon.style.transform || window.getComputedStyle(icon).transform;
 
     // 注入 rotate
-    const rotate = `rotate(${this._currentRotation}deg)`;
+    const rotate = `rotate(${
+      this._currentRotation + this.options.rotationOffset!
+    }deg)`;
     let newTransform = currentTransform;
 
     if (currentTransform === "none") {

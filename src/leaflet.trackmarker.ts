@@ -9,6 +9,7 @@ declare global {
       speed?: number; // km/s
       autoPlay?: boolean;
       rotation?: boolean;
+      rotationOffset?: number;
 
       onFinish?: () => void;
       onProgress?: () => void;
