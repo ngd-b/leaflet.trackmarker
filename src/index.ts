@@ -1,13 +1,13 @@
 import * as L from "leaflet";
 import "./leaflet.trackmarker";
-import { along, bearing, length } from "@turf/turf";
+import { along, bearing, length, lineString } from "@turf/turf";
 import type { Feature, LineString } from "geojson";
 
 // 插件实现
 export class TrackMarker extends L.Marker {
   declare options: L.TrackMarkerOptions;
 
-  private _polyline: L.Polyline;
+  private _polyline: L.Polyline<LineString>;
   private _line: Feature<LineString>;
   private _totalDistance: number;
   private _isPlaying: boolean = false;
@@ -15,7 +15,7 @@ export class TrackMarker extends L.Marker {
   private _animationId: number | null = null;
   private _currentRotation: number = 0;
 
-  constructor(line: L.Polyline, options?: L.TrackMarkerOptions) {
+  constructor(line: L.Polyline<LineString>, options?: L.TrackMarkerOptions) {
     // 默认选项
     const defaultOptions: L.TrackMarkerOptions = {
       speed: 0.1,
@@ -30,7 +30,7 @@ export class TrackMarker extends L.Marker {
     super(latlngs[0]!, { ...defaultOptions, ...options });
 
     this._polyline = line;
-    this._line = this._polyline.toGeoJSON() as Feature<LineString>;
+    this._line = lineString(this._polyline.toGeoJSON().geometry.coordinates);
 
     // 总距离（km）
     this._totalDistance = length(this._line, { units: "kilometers" });
@@ -88,12 +88,12 @@ export class TrackMarker extends L.Marker {
     if (this._isPlaying) return this;
     this._isPlaying = true;
 
-    const startTime = performance.now() - this._elapsedTime * 1000;
     // 记录上一帧的时间
     let lastTime = performance.now();
 
     const animate = (currentTime: number) => {
-      let deltaTime = (currentTime - lastTime) / 1000;
+      let deltaTime = Math.max((currentTime - lastTime) / 1000, 0);
+      lastTime = currentTime;
       // 防止瞬移
       const maxDeltaTime = 0.1; // 最大 100ms
       this._elapsedTime += Math.min(deltaTime, maxDeltaTime);
@@ -110,7 +110,6 @@ export class TrackMarker extends L.Marker {
       this._updatePositionAndRotation();
       this.options.onProgress?.call(this);
 
-      lastTime = currentTime;
       this._animationId = requestAnimationFrame(animate);
     };
 
@@ -141,6 +140,7 @@ export class TrackMarker extends L.Marker {
     }
     this.setLatLng(L.latLng(point[1]!, point[0]!));
     this.options.onReset?.call(this);
+    if (this.options.autoPlay) this.play();
     return this;
   }
 
@@ -196,7 +196,7 @@ export class TrackMarker extends L.Marker {
 
 // 工厂函数：小写，返回实例
 export function trackMarker(
-  line: L.Polyline,
+  line: L.Polyline<LineString>,
   options?: L.TrackMarkerOptions
 ): L.TrackMarker {
   return new TrackMarker(line, options);
@@ -206,7 +206,7 @@ export function trackMarker(
 L.Map.addInitHook(function (this: L.Map) {
   // @ts-ignore
   this.trackMarker = (
-    line: L.Polyline,
+    line: L.Polyline<LineString>,
     options?: L.TrackMarkerOptions
   ): L.TrackMarker => {
     return new TrackMarker(line, options);

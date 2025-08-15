@@ -56,7 +56,10 @@ declare global {
     }
 
     class TrackMarker extends L.Marker {
-      constructor(line: L.Polyline, options?: TrackMarkerOptions);
+      constructor(
+        line: L.Polyline<GeoJSON.LineString>,
+        options?: TrackMarkerOptions
+      );
       /**
        * 播放
        */
@@ -92,7 +95,7 @@ declare global {
      * @returns this
      */
     function trackMarker(
-      line: L.Polyline,
+      line: L.Polyline<GeoJSON.LineString>,
       options?: TrackMarkerOptions
     ): TrackMarker;
   }
