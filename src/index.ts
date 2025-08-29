@@ -7,11 +7,12 @@ import type { Feature, LineString } from "geojson";
 export class TrackMarker extends L.Marker {
   declare options: L.TrackMarkerOptions;
 
-  private _polyline: L.Polyline<LineString>;
-  private _line: Feature<LineString>;
+  private _polyline: L.Polyline<LineString> | null;
+  private _line: Feature<LineString> | null;
   private _totalDistance: number;
   private _isPlaying: boolean = false;
-  private _elapsedTime: number = 0;
+  // private _elapsedTime: number = 0;
+  private _traveled: number = 0;
   private _animationId: number | null = null;
   private _currentRotation: number = 0;
 
@@ -45,6 +46,8 @@ export class TrackMarker extends L.Marker {
 
   onRemove(map: L.Map): this {
     this.pause();
+    this._line = null;
+    this._polyline = null;
     super.onRemove(map);
     return this;
   }
@@ -96,12 +99,11 @@ export class TrackMarker extends L.Marker {
       lastTime = currentTime;
       // 防止瞬移
       const maxDeltaTime = 0.1; // 最大 100ms
-      this._elapsedTime += Math.min(deltaTime, maxDeltaTime);
+      let elapsedTime = Math.min(deltaTime, maxDeltaTime);
 
-      const traveled = this._elapsedTime * this.options.speed!;
-      if (traveled >= this._totalDistance) {
+      this._traveled += elapsedTime * this.options.speed!;
+      if (this._traveled >= this._totalDistance) {
         this._isPlaying = false;
-        this._elapsedTime = this._totalDistance / this.options.speed!;
 
         this.options.onFinish?.call(this);
         return;
@@ -132,8 +134,8 @@ export class TrackMarker extends L.Marker {
 
   reset(): this {
     this.pause();
-    this._elapsedTime = 0;
-    const point = this._line.geometry.coordinates[0]!;
+    this._traveled = 0;
+    const point = this._line!.geometry.coordinates[0]!;
 
     if (this.options.rotation) {
       this._currentRotation = this._estimateInitialBearing();
@@ -146,16 +148,15 @@ export class TrackMarker extends L.Marker {
 
   seek(percent: number): this {
     percent = Math.max(0, Math.min(1, percent));
-    const distance = percent * this._totalDistance;
-    const pos = along(this._line, distance, { units: "kilometers" }).geometry
-      .coordinates;
+    this._traveled = percent * this._totalDistance;
+    const pos = along(this._line!, this._traveled, { units: "kilometers" })
+      .geometry.coordinates;
     this.setLatLng(L.latLng(pos[1]!, pos[0]!));
 
     if (this.options.rotation) {
-      this._currentRotation = this._getBearingAtDistance(distance);
+      this._currentRotation = this._getBearingAtDistance();
     }
 
-    this._elapsedTime = distance / this.options.speed!;
     return this;
   }
 
@@ -165,28 +166,29 @@ export class TrackMarker extends L.Marker {
   }
 
   private _updatePositionAndRotation(): L.LatLng {
-    const traveled = this._elapsedTime * this.options.speed!;
-    const pos = along(this._line, traveled, { units: "kilometers" }).geometry
-      .coordinates;
+    const pos = along(this._line!, this._traveled, { units: "kilometers" })
+      .geometry.coordinates;
 
     let latlng = L.latLng(pos[1]!, pos[0]!);
     this.setLatLng(latlng);
 
     if (this.options.rotation) {
-      this._currentRotation = this._getBearingAtDistance(traveled);
+      this._currentRotation = this._getBearingAtDistance();
     }
     return latlng;
   }
 
-  private _getBearingAtDistance(distance: number): number {
-    const slice = along(this._line, distance, { units: "kilometers" });
-    const next = along(this._line, distance + 0.001, { units: "kilometers" });
+  private _getBearingAtDistance(): number {
+    const slice = along(this._line!, this._traveled, { units: "kilometers" });
+    const next = along(this._line!, this._traveled + 0.001, {
+      units: "kilometers",
+    });
     return bearing(slice, next);
   }
 
   private _estimateInitialBearing(): number {
-    const p1 = this._line.geometry.coordinates[0]!;
-    const p2 = this._line.geometry.coordinates[1]!;
+    const p1 = this._line!.geometry.coordinates[0]!;
+    const p2 = this._line!.geometry.coordinates[1]!;
     return bearing(
       { type: "Point", coordinates: p1 },
       { type: "Point", coordinates: p2 }
