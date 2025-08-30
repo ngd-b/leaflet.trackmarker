@@ -97,22 +97,27 @@ export class TrackMarker extends L.Marker {
     const animate = (currentTime: number) => {
       let deltaTime = Math.max((currentTime - lastTime) / 1000, 0);
       lastTime = currentTime;
+      // 限制最大
       // 防止瞬移
       const maxDeltaTime = 0.1; // 最大 100ms
       let elapsedTime = Math.min(deltaTime, maxDeltaTime);
 
       this._traveled += elapsedTime * this.options.speed!;
+
       if (this._traveled >= this._totalDistance) {
         this._isPlaying = false;
+        this._traveled = this._totalDistance;
 
         this.options.onFinish?.call(this);
-        return;
-      }
 
+        this._animationId = null;
+      }
       this._updatePositionAndRotation();
       this.options.onProgress?.call(this);
 
-      this._animationId = requestAnimationFrame(animate);
+      if (!this._isPlaying) {
+        this._animationId = requestAnimationFrame(animate);
+      }
     };
 
     this.options.onBeforePlay?.call(this);
