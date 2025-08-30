@@ -85,6 +85,16 @@ declare global {
        * @param speed 速度
        */
       setSpeed(speed: number): this;
+      /**
+       * 获取当前已移动的长度
+       *
+       */
+      getTraveled(): number;
+      /**
+       * 获取轨迹的总长度
+       *
+       */
+      getTotalDistance(): number;
     }
 
     /**

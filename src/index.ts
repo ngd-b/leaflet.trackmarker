@@ -1,7 +1,7 @@
 import * as L from "leaflet";
 import "./leaflet.trackmarker";
 import { along, bearing, length, lineString } from "@turf/turf";
-import type { LineString } from "geojson";
+import type { Feature, LineString } from "geojson";
 
 // 插件实现
 export class TrackMarker extends L.Marker {
@@ -15,6 +15,7 @@ export class TrackMarker extends L.Marker {
   private _currentRotation: number = 0;
 
   // 原始路线数据
+  private _line: Feature<LineString>;
   private _latlngs: L.LatLng[];
   private _segmentDistances: number[];
 
@@ -32,6 +33,7 @@ export class TrackMarker extends L.Marker {
     }
     super(latlngs[0]!, { ...defaultOptions, ...options });
 
+    this._line = lineString(latlngs.map((latlng) => [latlng.lng, latlng.lat]));
     this._latlngs = latlngs;
     this._segmentDistances = [];
     this._totalDistance = 0;
@@ -128,6 +130,7 @@ export class TrackMarker extends L.Marker {
         this._animationId = null;
       }
       this._updatePositionAndRotation();
+
       this.options.onProgress?.call(this);
 
       if (this._isPlaying) {
@@ -143,6 +146,7 @@ export class TrackMarker extends L.Marker {
 
   pause(): this {
     if (!this._isPlaying) return this;
+
     this._isPlaying = false;
     if (this._animationId !== null) {
       cancelAnimationFrame(this._animationId);
@@ -154,6 +158,7 @@ export class TrackMarker extends L.Marker {
 
   reset(): this {
     this.pause();
+
     this._traveled = 0;
     this.setLatLng(this._latlngs[0]!);
 
@@ -184,6 +189,12 @@ export class TrackMarker extends L.Marker {
     this.options.speed = speed;
     return this;
   }
+  getTraveled(): number {
+    return this._traveled;
+  }
+  getTotalDistance(): number {
+    return this._totalDistance;
+  }
 
   private _updatePositionAndRotation() {
     const result = this._getPointAtDistance();
@@ -195,10 +206,9 @@ export class TrackMarker extends L.Marker {
   }
 
   private _getPointAtDistance(): { latlng: L.LatLng; bearing: number } {
-    const line = lineString(this._latlngs.map((ll) => [ll.lng, ll.lat]));
     const traveled = this._traveled;
 
-    const points = along(line, traveled, { units: "kilometers" });
+    const points = along(this._line, traveled, { units: "kilometers" });
     const coords = points.geometry.coordinates as [number, number];
     const latlng = L.latLng(coords[1], coords[0]);
 
