@@ -1,6 +1,6 @@
 import * as L from "leaflet";
 import "./leaflet.trackmarker";
-import { bearing, length, lineString } from "@turf/turf";
+import { along, bearing, length, lineString } from "@turf/turf";
 import type { LineString } from "geojson";
 
 // 插件实现
@@ -113,11 +113,11 @@ export class TrackMarker extends L.Marker {
     const animate = (currentTime: number) => {
       let deltaTime = Math.max((currentTime - lastTime) / 1000, 0);
       lastTime = currentTime;
-      const distanceThisFrame = deltaTime * this.options.speed!;
-      // 限制最大
-      let maxDistancePerFrame = this._getMaxDistancePerFrame();
 
-      this._traveled += Math.min(distanceThisFrame, maxDistancePerFrame);
+      // 限制最大
+      let maxDeltaTime = Math.min(deltaTime, 0.05);
+
+      this._traveled += maxDeltaTime * this.options.speed!;
 
       if (this._traveled >= this._totalDistance) {
         this._isPlaying = false;
@@ -195,7 +195,13 @@ export class TrackMarker extends L.Marker {
   }
 
   private _getPointAtDistance(): { latlng: L.LatLng; bearing: number } {
+    const line = lineString(this._latlngs.map((ll) => [ll.lng, ll.lat]));
     const traveled = this._traveled;
+
+    const points = along(line, traveled, { units: "kilometers" });
+    const coords = points.geometry.coordinates as [number, number];
+    const latlng = L.latLng(coords[1], coords[0]);
+
     let accumulated = 0;
 
     let i = 0;
@@ -208,13 +214,6 @@ export class TrackMarker extends L.Marker {
     }
     const from = this._latlngs[i]!;
     const to = this._latlngs[i + 1]!;
-
-    const segLen = this._segmentDistances[i]!;
-    const t = (traveled - accumulated) / segLen;
-
-    const lat = from.lat + (to.lat - from.lat) * t;
-    const lng = from.lng + (to.lng - from.lng) * t;
-    const latlng = L.latLng(lat, lng);
 
     const bearingVal = bearing([from.lng, from.lat], [to.lng, to.lat]);
 
@@ -229,15 +228,6 @@ export class TrackMarker extends L.Marker {
       { type: "Point", coordinates: [from.lng, from.lat] },
       { type: "Point", coordinates: [to.lng, to.lat] }
     );
-  }
-
-  private _getMaxDistancePerFrame(): number {
-    const speed = this.options.speed!;
-
-    if (speed <= 1) return 0.01;
-    if (speed <= 5) return 0.02;
-    if (speed <= 10) return 0.03;
-    return 0.1;
   }
 }
 
