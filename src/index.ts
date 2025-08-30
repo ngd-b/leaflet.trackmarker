@@ -1,20 +1,22 @@
 import * as L from "leaflet";
 import "./leaflet.trackmarker";
-import { along, bearing, length, lineString } from "@turf/turf";
-import type { Feature, LineString } from "geojson";
+import { bearing, length, lineString } from "@turf/turf";
+import type { LineString } from "geojson";
 
 // 插件实现
 export class TrackMarker extends L.Marker {
   declare options: L.TrackMarkerOptions;
 
-  private _polyline: L.Polyline<LineString> | null;
-  private _line: Feature<LineString> | null;
   private _totalDistance: number;
   private _isPlaying: boolean = false;
   // private _elapsedTime: number = 0;
   private _traveled: number = 0;
   private _animationId: number | null = null;
   private _currentRotation: number = 0;
+
+  // 原始路线数据
+  private _latlngs: L.LatLng[];
+  private _segmentDistances: number[];
 
   constructor(line: L.Polyline<LineString>, options?: L.TrackMarkerOptions) {
     // 默认选项
@@ -30,11 +32,27 @@ export class TrackMarker extends L.Marker {
     }
     super(latlngs[0]!, { ...defaultOptions, ...options });
 
-    this._polyline = line;
-    this._line = lineString(this._polyline.toGeoJSON().geometry.coordinates);
+    this._latlngs = latlngs;
+    this._segmentDistances = [];
+    this._totalDistance = 0;
 
-    // 总距离（km）
-    this._totalDistance = length(this._line, { units: "kilometers" });
+    for (let i = 1; i < latlngs.length; i++) {
+      const from = latlngs[i - 1]!;
+      const to = latlngs[i]!;
+
+      const segment = lineString([
+        [from.lng, from.lat],
+        [to.lng, to.lat],
+      ]);
+      const distance = length(segment, { units: "kilometers" });
+
+      this._segmentDistances.push(distance);
+      this._totalDistance += distance;
+    }
+
+    if (this.options.rotation) {
+      this._currentRotation = this._estimateInitialBearing();
+    }
   }
 
   onAdd(map: L.Map): this {
@@ -46,8 +64,6 @@ export class TrackMarker extends L.Marker {
 
   onRemove(map: L.Map): this {
     this.pause();
-    this._line = null;
-    this._polyline = null;
     super.onRemove(map);
     return this;
   }
@@ -97,12 +113,11 @@ export class TrackMarker extends L.Marker {
     const animate = (currentTime: number) => {
       let deltaTime = Math.max((currentTime - lastTime) / 1000, 0);
       lastTime = currentTime;
+      const distanceThisFrame = deltaTime * this.options.speed!;
       // 限制最大
-      // 防止瞬移
-      const maxDeltaTime = 0.1; // 最大 100ms
-      let elapsedTime = Math.min(deltaTime, maxDeltaTime);
+      let maxDistancePerFrame = this._getMaxDistancePerFrame();
 
-      this._traveled += elapsedTime * this.options.speed!;
+      this._traveled += Math.min(distanceThisFrame, maxDistancePerFrame);
 
       if (this._traveled >= this._totalDistance) {
         this._isPlaying = false;
@@ -115,7 +130,7 @@ export class TrackMarker extends L.Marker {
       this._updatePositionAndRotation();
       this.options.onProgress?.call(this);
 
-      if (!this._isPlaying) {
+      if (this._isPlaying) {
         this._animationId = requestAnimationFrame(animate);
       }
     };
@@ -140,12 +155,12 @@ export class TrackMarker extends L.Marker {
   reset(): this {
     this.pause();
     this._traveled = 0;
-    const point = this._line!.geometry.coordinates[0]!;
+    this.setLatLng(this._latlngs[0]!);
 
     if (this.options.rotation) {
       this._currentRotation = this._estimateInitialBearing();
     }
-    this.setLatLng(L.latLng(point[1]!, point[0]!));
+
     this.options.onReset?.call(this);
     if (this.options.autoPlay) this.play();
     return this;
@@ -154,12 +169,12 @@ export class TrackMarker extends L.Marker {
   seek(percent: number): this {
     percent = Math.max(0, Math.min(1, percent));
     this._traveled = percent * this._totalDistance;
-    const pos = along(this._line!, this._traveled, { units: "kilometers" })
-      .geometry.coordinates;
-    this.setLatLng(L.latLng(pos[1]!, pos[0]!));
+
+    const result = this._getPointAtDistance();
+    this.setLatLng(result.latlng);
 
     if (this.options.rotation) {
-      this._currentRotation = this._getBearingAtDistance();
+      this._currentRotation = result.bearing;
     }
 
     return this;
@@ -170,34 +185,59 @@ export class TrackMarker extends L.Marker {
     return this;
   }
 
-  private _updatePositionAndRotation(): L.LatLng {
-    const pos = along(this._line!, this._traveled, { units: "kilometers" })
-      .geometry.coordinates;
-
-    let latlng = L.latLng(pos[1]!, pos[0]!);
-    this.setLatLng(latlng);
+  private _updatePositionAndRotation() {
+    const result = this._getPointAtDistance();
+    this.setLatLng(result.latlng);
 
     if (this.options.rotation) {
-      this._currentRotation = this._getBearingAtDistance();
+      this._currentRotation = result.bearing;
     }
-    return latlng;
   }
 
-  private _getBearingAtDistance(): number {
-    const slice = along(this._line!, this._traveled, { units: "kilometers" });
-    const next = along(this._line!, this._traveled + 0.001, {
-      units: "kilometers",
-    });
-    return bearing(slice, next);
+  private _getPointAtDistance(): { latlng: L.LatLng; bearing: number } {
+    const traveled = this._traveled;
+    let accumulated = 0;
+
+    let i = 0;
+    for (; i < this._segmentDistances.length; i++) {
+      const segLen = this._segmentDistances[i]!;
+      if (accumulated + segLen >= traveled) {
+        break;
+      }
+      accumulated += segLen;
+    }
+    const from = this._latlngs[i]!;
+    const to = this._latlngs[i + 1]!;
+
+    const segLen = this._segmentDistances[i]!;
+    const t = (traveled - accumulated) / segLen;
+
+    const lat = from.lat + (to.lat - from.lat) * t;
+    const lng = from.lng + (to.lng - from.lng) * t;
+    const latlng = L.latLng(lat, lng);
+
+    const bearingVal = bearing([from.lng, from.lat], [to.lng, to.lat]);
+
+    return { latlng, bearing: bearingVal };
   }
 
   private _estimateInitialBearing(): number {
-    const p1 = this._line!.geometry.coordinates[0]!;
-    const p2 = this._line!.geometry.coordinates[1]!;
+    const from = this._latlngs[0]!;
+    const to = this._latlngs[1]!;
+
     return bearing(
-      { type: "Point", coordinates: p1 },
-      { type: "Point", coordinates: p2 }
+      { type: "Point", coordinates: [from.lng, from.lat] },
+      { type: "Point", coordinates: [to.lng, to.lat] }
     );
+  }
+
+  private _getMaxDistancePerFrame(): number {
+    const speed = this.options.speed!;
+
+    if (speed <= 1) return 0.01;
+    if (speed <= 5) return 0.02;
+    if (speed <= 10) return 0.03;
+    return 0.1;
   }
 }
 
