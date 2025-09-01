@@ -151,6 +151,8 @@ marker.reset();    // 重置到起点
 | `.reset()` | 重置到路径起点 |
 | `.seek(percent)` | 跳转到路径的百分比位置（0-1） |
 | `.setSpeed(speed)` | 动态设置新速度 |
+| `.getTraveled()`| 获取已 traveled 的距离 |
+| `.getTotalDistance()` | 获取路径的总距离 |
 
 ---
 
